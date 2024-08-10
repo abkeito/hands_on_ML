@@ -6,6 +6,7 @@
 \usepackage{graphicx} % Required for inserting images
 \usepackage{booktabs}
 \usepackage{pdfpages}
+\usepackage{bm}
 \usepackage[subrefformat=parens]{subcaption}
 % コード
 \usepackage{listings,jvlisting}
@@ -38,306 +39,33 @@
 \lstset{style=mystyle}
 \renewcommand{\lstlistingname}{Code}
 
-\title{電気回路理論第二 フィルタ設計レポート}
-\author{電子情報学科 阿部 慧人}
-\date{2024年 6月 29日}
+\title{scikit-learn、Keras、TensorFlowによる実践機械学習}
+\author{東京大学 工学部 3年 阿部 慧人}
+\date{2024年 8月 18日}
 
 \begin{document}
 
 \begin{abstract}
-「3次以上」の所望のフィルタを得る。
-また、すべてのフィルタで同一の次数を用いてはならないという制限の下で、
-低域通過フィルタ(LPF)、高域通過フィルタ(HPF)、帯域通過フィルタ(BPF)、帯域除去フィルタ(BEF)の設計を行なった。
+インターンの課題図書の4章から9章の演習問題を自分で解いたものの答えを載せる。
 \end{abstract}
 
 \maketitle
-\section{フィルタ設計方針}
-今回のフィルタを作るにあたって、フィルタを設計する方針を簡単にまとめる。
-\subsection{フィルタの基本要素を決める。}
-最初にフィルタの基本要素を決めた。
-\begin{enumerate}
-\item LPF, HPF, BPF, BEFのどれにするのか。
-\item フィルタの次数 n
-\item 伝達関数を Butterworth型にするのかChebyshev型にするのか
-\item R-R, 0-R, R-$\infty$ にするのか
-\end{enumerate}
+\section{4章 モデルの訓練}
+\subsection{問題4.1}
+数百万個もの特徴量を持つ訓練セットに対して、有効な線形回帰訓練アルゴリズムは、
+バッチGD、確率的GD、ミニバッチGDである。これらの勾配降下法は特徴量の数$n$に対して、$O(n)$でしか計算量が
+増加しない。一方で、正規方程式やSVDは、$O(n^{2})$以上の計算量がかかる。
+\subsection{問題4.2}
+特徴量のスケールが大きく異なる場合、勾配降下法を使うと時間がかかるというデメリットがある。
+これは、損失関数の等高線が平たい形になり直線的に最小値に移動できないことが原因である。
 
-\subsection{規格化LPFの設計-伝達関数を決定する}
-\begin{enumerate}
-\item Butterworth型かChebyshev型に応じて曲を決定する
-\item 極を持つ因数の掛け算で伝達関数を得る
-\end{enumerate}
-\subsection{規格化LPFの設計-四端子網のF行列を決定する}
-四端子網は、図 \ref{F}
-\begin{figure}[H]
-    \centering
-   \includegraphics[keepaspectratio, width=0.9\columnwidth, page = 1,bb= 0 0 400 160, clip]{./kairo2.drawio.pdf}
-   \caption{四端子網}
-    \label{F}
-\end{figure}
-\begin{equation}
-F = 
-\left(\begin{array}{cc} 1 & 0 \\ R_{1} & 1 \\ \end{array} \right) 
-\left(\begin{array}{cc} A & C \\ B & D \\ \end{array} \right) 
-\left(\begin{array}{cc} 1 & 1/R_{2} \\ 0 & 1 \\ \end{array} \right) 
-\end{equation}
-式(1)を考えることで、
-\begin{equation}
-\frac{V_{out}}{V_{in}} = \frac{1}{A+CR_{1}+\frac{B}{R_{2}}+\frac{DR_{1}}{R_{2}}} = \frac{1}{F(s)}
-\end{equation}
-となる。ここで
-\begin{equation}
-(R_{1}, R_{2}) = (R, R), (0, R), (R, \infty)
-\end{equation}
-と A, D は偶関数、B, C は奇関数であるため、A, B, C, Dが決定する。
-
-\subsection{規格化LPFの設計-フィルタの入出力インピーダンスを考える}
-\begin{enumerate}
-\item $(0, R)$型の時 \\
-$Z_{out} = \frac{B}{A}$となる。
-\item $(R, \infty)$型の時 \\
-$Z_{in} = \frac{A}{C}$となる。
-\end{enumerate}
-これらのリアクタンス関数を実現するように、Fosterの部分分数分解や、Cauerの連分数展開をして、
-素子の値と配置が決定する。
-
-\subsection{所望のフィルタに変換}
-ここまでで規格化されたLPFを得たのだから、カットオフ周波数、内蔵する抵抗値、フィルタの種類(LPF, HPF, BPF, BEF)に応じて
-各素子を変換することで実際に欲しい回路が得られる。
-\begin{enumerate}
-\item 一般のLPFへ \\
-$抵抗をR、カットオフ周波数をw_{c}$としたとき、
-キャパシタ Cは、$C = \frac{C}{w_{c}R}$に、インダクタ Lは、$L = \frac{LR}{w_{c}}$に変換される。
-\item 一般のHPFへ \\
-$抵抗をR、カットオフ周波数をw_{c}$としたとき、
-キャパシタ Cは、$L = \frac{R}{w_{c}C}$のインダクタに、インダクタ Lは、$L = \frac{1}{RLw_{c}}$のキャパシタに変換される。
-\item 一般のBPFへ \\
-$抵抗をR、通過域周波数をw_{1} \leq w \leq w_{2}$としたとき、
-$w_{0} = \sqrt{w_{1}w_{2}}、w_{b} = w_{2} - w_{1}$とする。
-キャパシタ Cは、$C0 = \frac{C}{w_{b}R}$のキャパシタと $L0 = \frac{w_{b}R}{w_{0}^{2}C}$のインダクタの並列つなぎに変換される。
-インダクタ Lは、$C0 = \frac{w_{b}}{w_{0}^{2}RL}$のキャパシタと $L0 = \frac{LR}{w_{b}}$のインダクタの直列つなぎに変換される。
-\item 一般のBEFへ \\
-$抵抗をR、除去域周波数をw_{1} \leq w \leq w_{2}$としたとき、
-$w_{0} = \sqrt{w_{1}w_{2}}、w_{b} = w_{2} - w_{1}$とする。
-キャパシタ Cは、$C0 = \frac{w_{b}C}{w_{0}^{2}R}$のキャパシタと $L0 = \frac{R}{w_{b}C}$のインダクタの直列つなぎに変換される。
-インダクタ Lは、$C0 = \frac{1}{w_{b}RL}$のキャパシタと $L0 = \frac{w_{b}LR}{w_{0}^{2}}$のインダクタの並列つなぎに変換される。
-\end{enumerate}
-
-\section{規格化LPFの設計}
-まずは、規格化LPFを設計した。
-\subsection{4次Butterworth型規格化LPF ($0-R 型$)}
-極を求めることで、伝達関数が
-\begin{equation}
-    F(s) = (s^{2} + 0.67545s + 1)(s^{2} + 1.87465s + 1)
-\end{equation} 
-である。
-これより、
+\subsection{問題4.3}
+ロジスティック回帰モデルの損失関数は、式(1)(2)である。
 \begin{gather}
-A = s^{4} + 3.2662s^{2} + 1 \\
-B = 2.5501s^{3} + 2.5501s^{3}
+    J(\theta) = -\frac{1}{m}\Sigma[y^{(i)}log(p^{(i)}) + (1-y^{(i)})log(1-p^{(i)})] \\
+    where  p = \sigma(\bm{x}^{T}\theta)
 \end{gather}
-のようにF行列が決定する。
-あとは、$Z_{out} = \frac{B}{A}$を連分数分解をすることで、図 \ref{butter}のように決定する。
-\begin{figure}[H]
-    \centering
-   \includegraphics[keepaspectratio, width=0.9\columnwidth, bb= 0 0 400 160, clip]{./butterlpf.pdf}
-   \caption{4次Butterworth型規格化LPF}
-    \label{butter}
-\end{figure}
-素子の値は、表 \ref{butterhyou}の通りである。
-\begin{table}
-    \centering
-    \caption{規格化Butterworthフィルタの素子}
-    \begin{tabular}{@{}lllll@{}} \toprule
-    R2 & L1 & C1 & L2 & C2 \\ \midrule
-    1 $\Omega$ & 1.4248 H & 1.5905 F & 1.1253 H & 0.3921 F \\ \bottomrule
-    \end{tabular} 
-    \label{butterhyou}
-\end{table}
+この式から、$J(\theta)$は、$\theta$について凸関数とわかるので、極小値は唯一でそれを最小値とすればよい。
 
-\subsection{3次Chebyshev型規格化LPF ($R-\infty 型$)}
-極を求めることで、伝達関数が
-\begin{equation}
-    F(s) = 0.4s^{3} + 0.9394s^{2} + 1.4032s + 1
-\end{equation} 
-である。
-これより、
-\begin{gather}
-A = 0.9394s^{2} + 1\\
-B = 0.4s^{3} + 1.4032s
-\end{gather}
-のようにF行列が決定する。
-あとは、$Z_{in} = \frac{A}{C}$を連分数分解をすることで、図 \ref{cheby}のように決定する。
-\begin{figure}[H]
-    \centering
-   \includegraphics[keepaspectratio, width=0.9\columnwidth,bb= 0 0 400 160, clip]{./chibylpf.pdf}
-   \caption{3次Chebyshev型規格化LPF}
-    \label{cheby}
-\end{figure}
-素子の値は、表 \ref{che}の通りである。
-\begin{table}
-    \centering
-    \caption{規格化Butterworthフィルタの素子}
-    \begin{tabular}{@{}llll@{}} \toprule
-    R1 & C1 & L1 & C2  \\ \midrule
-    1 $\Omega$ & 2.0093 F & 15.3641 H & 2.6265 F \\ \bottomrule
-    \end{tabular} 
-    \label{che}
-\end{table}
-
-\section{実際のフィルタ設計}
-
-\subsection{LPF(Low Pass Filter)}
-LPFは、3次のChebyshev型で$R-\infty 型$のもので設計した。
-また、$R_{1} = 100\Omega, w_{c} = 6283, f_{c} = 1kHz$として各素子の変換をしたところ、
-図 \ref{lpf}、表 \ref{lpfhyou}のようになった。
-\begin{figure}[H]
-    \centering
-   \includegraphics[keepaspectratio, width=0.9\columnwidth,bb= 0 0 400 160, clip]{./chibylpf.pdf}
-   \caption{3次Chebyshev型 LPF}
-    \label{lpf}
-\end{figure}
-\begin{table}
-    \centering
-    \caption{Chebyshev LPFフィルタの素子}
-    \begin{tabular}{@{}llll@{}} \toprule
-    R1 & C1 & L1 & C2  \\ \midrule
-    100 $\Omega$ & 1.134 $\mu$ F & 0.034 H & 2.603 $\mu$ F \\ \bottomrule
-    \end{tabular} 
-    \label{lpfhyou}
-\end{table}
-
-こうして作成したフィルタの振幅特性は図 \ref{lpfs}のようになった。
-\begin{figure}[H]
-    \centering
-   \includegraphics[keepaspectratio, width=0.9\columnwidth,bb= 0 0 900 360, clip]{./lpf.pdf}
-   \caption{LPFの振幅特性}
-    \label{lpfs}
-\end{figure}
-図より、所望の遮断周波数 $f_{c} = 10$kHzを得ることができている。また、Chebyshev型であるため、リプルを1dBほど
-一度生じている。遮断特性が強く、減衰傾度がButterworthフィルタよりも大きいことが確認できた。
-
-\subsection{HPF(High Pass Filter)}
-HPFは、4次のButterworth型で$0-R型$のもので設計した。
-また、$R_{1} = 100\Omega, w_{c} = 6283, f_{c} = 1kHz$として各素子の変換をしたところ、
-図 \ref{hpf}、表 \ref{hpfhyou}のようになった。
-\begin{figure}[H]
-    \centering
-   \includegraphics[keepaspectratio, width=0.9\columnwidth,bb= 0 0 400 160, clip]{./butterhpf.pdf}
-   \caption{4次Butterworth型 HPF}
-    \label{hpf}
-\end{figure}
-\begin{table}
-    \centering
-    \caption{Butterworth HPFフィルタの素子}
-    \begin{tabular}{@{}lllll@{}} \toprule
-    R2 & L1 & C1 & L2 & C2\\ \midrule
-    100$\Omega$ & 0.0041H & 14.144$\mu$F & 0.0010H & 11.170$\mu$F \\ \bottomrule
-    \end{tabular} 
-    \label{hpfhyou}
-\end{table}
-こうして作成したフィルタの振幅特性は図 \ref{hpfs}のようになった。
-\begin{figure}[H]
-    \centering
-   \includegraphics[keepaspectratio, width=0.9\columnwidth,bb= 0 0 900 360, clip]{./hpf.pdf}
-   \caption{HPFの振幅特性}
-    \label{hpfs}
-\end{figure}
-図より、所望の遮断周波数 $f_{c} = 1$kHzを得ることができている。また、Butterworth型であるため、通過域で平坦になっている。
-\subsection{BPF(Band Pass Filter)}
-LPFは、3次のChebyshev型で$R-\infty 型$のもので設計した。
-また、$R_{1} = 10\Omega, (w_{a}, w_{b}) = (62.83, 6283) , (f_{a} ,f_{b}) = (10Hz, 1kHz)$として各素子の変換をしたところ、
-図 \ref{bpf}、表 \ref{bpfhyou1}, \ref{bpfhyou2}のようになった。
-\begin{figure}[H]
-    \centering
-   \includegraphics[keepaspectratio, width=0.9\columnwidth,bb= 0 0 400 160, clip]{./butterbpf.pdf}
-   \caption{4次Butterworth型 BPF}
-    \label{bpf}
-\end{figure}
-\begin{table}
-    \centering
-    \caption{Butterworth BPFフィルタの素子1}
-    \begin{tabular}{@{}lllll@{}} \toprule
-    R2 & C1 & L1 & C2 & L2 \\ \midrule
-    100 $\Omega$ & 6.3044 $\mu$ F & 0.4018 H & 0.0014 F & 0.0018\\ \bottomrule
-    \end{tabular} 
-    \label{bpfhyou1}
-\end{table}
-\begin{table}
-    \centering
-    \caption{Butterworth BPFフィルタの素子2}
-    \begin{tabular}{@{}llll@{}} \toprule
-    C3 & L3 & C4 & L4   \\ \midrule
-    25.57 $\mu$F & 0.0991 H & 0.0011 & 0.0023 \\ \bottomrule
-    \end{tabular} 
-    \label{bpfhyou2}
-\end{table}
-こうして作成したフィルタの振幅特性は図 \ref{lpfs}のようになった。
-\begin{figure}[H]
-    \centering
-   \includegraphics[keepaspectratio, width=0.9\columnwidth,bb= 0 0 900 360, clip]{./bpf.pdf}
-   \caption{BPFの振幅特性}
-    \label{bpfs}
-\end{figure}
-図より、所望の周波数通過域 $f_{a} = 10$Hz $\leq f \leq f_{b} = 1$kHZを得ることができている。また、Butterworth型であるため、通過域で平坦になっている。
-
-\subsection{BEF(Band Elimination Filter)}
-HPFは、4次のButterworth型で$0-R型$のもので設計した
-また、$R_{1} = 10\Omega,  (w_{a}, w_{b}) = (62.83, 6283) , (f_{a} ,f_{b}) = (10Hz, 1kHz)$として各素子の変換をしたところ、
-図 \ref{bef}、表 \ref{befhyou1},\ref{befhyou2}のようになった。
-\begin{figure}[H]
-    \centering
-   \includegraphics[keepaspectratio, width=0.9\columnwidth,bb= 0 0 400 220, clip]{./chebybef.pdf}
-   \caption{3次Chebyshev型 BEF}
-    \label{bef}
-\end{figure}
-\begin{table}
-    \centering
-    \caption{Chebyshev BEFフィルタの素子1}
-    \begin{tabular}{@{}llll@{}} \toprule
-    R1 & C1 & L1 & C2  \\ \midrule
-    10 $\Omega$ & 22.55 $\mu$ F & 0.112 H & 0.034 $\mu$ F \\ \bottomrule
-    \end{tabular} 
-    \label{befhyou1}
-\end{table}
-\begin{table}
-    \centering
-    \caption{Chebyshev BEFフィルタの素子2}
-    \begin{tabular}{@{}lll@{}} \toprule
-    L2 & C3 & L3   \\ \midrule
-    749.7 $\mu$H & 9.827 $\mu$ F & 0.2537 H \\ \bottomrule
-    \end{tabular} 
-    \label{befhyou2}
-\end{table}
-こうして作成したフィルタの振幅特性は図 \ref{befs}のようになった。
-\begin{figure}[H]
-    \centering
-   \includegraphics[keepaspectratio, width=0.9\columnwidth,bb= 0 0 900 360, clip]{./bef.pdf}
-   \caption{BEFの振幅特性}
-    \label{befs}
-\end{figure}
-図より、所望の周波数除去域 $f_{a} = 10$Hz $\leq f \leq f_{b} = 1$kHZを得ることができている。
-Chebyshev型であるため、減衰傾度は大きい。また、除去域の中心 $f_{0} = 100$Hzでは、-150dB程度の減衰を実現できている。
-%\begin{figure}[H]
-%    \centering
-%   \includegraphics[keepaspectratio, width=0.9\columnwidth, bb= 50 0 550 420, clip]{./codes/graphs/1-1.pdf}
-%   \caption{(1)のボーデ線図}
-%    \label{1-1}
-%\end{figure}
-
-
-%図の挿入
-%   \centering
-%    \includegraphics[keepaspectratio, width=0.9\columnwidth]{compile-link.pdf}
-%   \caption{フリップフロップとラッチの波形}
-%    \label{example}
-%\end{figure}
-
-
-\begin{thebibliography}{}
-\bibitem{東京大学工学部}
-東京大学工学部. 「電気電子情報第一(前期)実験」. P1. P40-51.
-\end{thebibliography}
-
-\end{document}
-
+\subsection{問題4.4}
+十分な時間を�
