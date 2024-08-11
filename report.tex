@@ -132,4 +132,120 @@ SVMを使うときに、入力をスケーリングするのはSVMは特徴量�
 \subsection{問題5.4}
 インスタンスの分類するときの確信度を数値化する方法として、決定協会からインスタンスまでの距離をスコアとしたものが考えられる。
 しかし、これを直接確率に変換する方法はない。
-scikit-learnでは、SVMクラスを使うときに、probability=Trueと�
+scikit-learnでは、SVMクラスを使うときに、probability=Trueとすれば確率をロジスティック回帰によって計算するメソッドが追加される。
+
+\subsection{問題5.5}
+訓練インスタンスの数$m$に対して、計算量は主問題は$O(m)$で、双対問題は$O(m^{2})からO(m^{3})$であるから種問題を解く方がよい。
+
+\subsection{問題5.6}
+ガウスRBFカーネルを使ったSVMで過小適合しているときは、$\gamma$を大きくした方が良い。
+$\gamma$を大きくすると、ベル曲線の幅が狭くなりより個別のインスタンスに適合するような形状になる。
+また、ハイパーパラメータCについても、大きくするとマージン違反に厳しくなるため、よりインスタンスに適合する。
+
+\subsection{問題5.7}
+ソフトマージン線形SVM分類器をQPソルバーを使って解くことを考える。
+このとき各変数は以下のように設定する。
+\begin{equation}
+\bm{H} = 
+\begin{pmatrix} 
+    0 & 0 & \dots  & 0 & \dots & 0 \\
+    0 & 1 & \dots  & 0 & \dots & 0 \\
+    \vdots & \vdots & \ddots & \vdots & \vdots & \vdots \\
+    0 & 0 & \dots  & 1 & \dots & 0 \\
+    \vdots & \vdots & \vdots & \vdots & \ddots & \vdots \\
+    0 & 0 & \dots  & 0 & \dots & 0 \\
+\end{pmatrix}
+\end{equation}
+\begin{equation}
+\bm{f} = 
+\begin{pmatrix} 
+    0 &  \dots  & 0 & c & \dots & c \\
+\end{pmatrix}
+^\mathrm{T}
+\end{equation}
+\begin{equation}
+    \bm{a'^{(i)}} = -t^{(i)} \times [1, \bm{x^{(i)}}]
+\end{equation}
+を満たす $m \times (n+1)$行列 $\bm{A'}$を考えた時、
+\begin{equation}
+    \bm{A} = 
+\begin{pmatrix} 
+    \bm{A'} &  I_{m}\\
+    \bm{O} & -I_{m} \\
+\end{pmatrix}
+\end{equation}
+\begin{equation}
+    \bm{b} = 
+    \begin{pmatrix} 
+        -1 &  \dots  & -1 & 0 & \dots & 0 \\
+    \end{pmatrix}
+    ^\mathrm{T}
+\end{equation}
+このようにすることで、QPの条件式の前半のm個で、$w$に関する条件と後半のm個で$\zeta$に関する条件が得られる。
+
+\subsection{問題5.8}
+Jupyter Notebookに掲載。
+
+\subsection{問題5.9}
+Jupyter Notebookに掲載。
+
+\subsection{問題5.10}
+Jupyter Notebookに掲載。
+
+\section{6章 決定木}
+\subsection{問題6.1}
+深さの制限を設けないような決定木を構成するとき、それはYesとNoを繰り返して二分木になることが考えられる。
+よって、$log_{2}m \approx 18$となる。よって深さは、18ほどだと想定される。
+
+\subsection{問題6.2}
+一般に親ノードよりも子ノードの方がジニ不純度は小さくなる。
+これは、CARTアルゴリズムでは子ノードのジニ不純度を小さくするように分割するようになっているから。
+しかし、これは常に成り立つわけではない。というのも、CARTアルゴリズムは複数いる子ノードの不純度の加重平均
+が小さくなるようにしているだけだから。インスタンスを多く含む子ノードを純粋にすることで、インスタンスの少ない別の子ノードの
+不純度が親ノードのそれよりも上昇しても、結果としてその加重平均は親ノードよりも小さくなる。
+
+\subsection{問題6.3}
+過学習をしているときは、正則化ハイパーパラメータのよって条件をより厳しくすることが望まれる。
+よって、max\_depthという上限は下げると良い。
+
+\subsection{問題6.4}
+入力特徴量の値を増やしても、スケーリングやセンタリングの影響を受けないから、意味はない。
+
+\subsection{問題6.5}
+計算量は、$O(n\times mlog_{2}m)$でインスタンスの数$mに対してmlog_{2}m$に比例する。
+そのため、インスタンスの数が10倍になれば、$10log_{2}10m / log_{2}m \approx 12$時間になる。
+
+\subsection{問題6.6}
+インスタンスの数が数千未満のときは、presortすることで速度は上がるが、インスタンスの数が多いときは速度がかなり下がる。
+
+\subsection{問題6.7}
+Juyter Notebookに実施
+
+\subsection{問題6.8}
+Juyter Notebookに実施
+
+\section{7章 アンサンブル学習とランダムフォレスト}
+\subsection{7.1}
+
+\section{8章 次元削減}
+\subsection{8.1}
+
+\section{9章 教師なし学習のテクニック}
+\subsection{9.1}
+
+
+%図の挿入
+%   \centering
+%    \includegraphics[keepaspectratio, width=0.9\columnwidth]{compile-link.pdf}
+%   \caption{フリップフロップとラッチの波形}
+%    \label{example}
+%\end{figure}
+
+
+\begin{thebibliography}{}
+\bibitem{オライリー・ジャパン}
+オライリー・ジャパン 「scikit-learn、Keras、TensorFlowによる実践機械学習」
+\end{thebibliography}
+
+\end{document}
+
